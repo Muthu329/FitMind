@@ -1,0 +1,2141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FitMind | AI-Powered Fitness & Wellness Platform</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        * { font-family: 'Inter', sans-serif; }
+        
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .gradient-text { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-5px); box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
+        .chat-bubble { animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .typing-indicator span { animation: pulse 1.5s infinite; }
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+        .nav-active { color: #667eea; border-bottom: 2px solid #667eea; }
+        .hero-pattern { background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23667eea' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"); }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- ============================================
+         FITMIND - AI-Powered Fitness & Wellness Platform
+         
+         CONFIGURATION
+         ============================================ -->
+    <script>
+        // ==========================================
+        // APPLICATION CONFIGURATION
+        // ==========================================
+        const CONFIG = {
+            MODE: "demo", // "demo" or "live"
+            APP_NAME: "FitMind",
+            VERSION: "1.0.0",
+            API_ENDPOINT: "https://api.fitmind.com/v1", // For live mode
+            SUPPORT_EMAIL: "muthurajp064@gmail.com"
+        };
+
+        // ==========================================
+        // DATABASE SCHEMA (For Reference)
+        // ==========================================
+        /*
+        TABLE: users
+        ├── id              UUID PRIMARY KEY
+        ├── email           VARCHAR(255) UNIQUE NOT NULL
+        ├── password_hash   VARCHAR(255) NOT NULL
+        ├── full_name       VARCHAR(100)
+        ├── avatar_url      TEXT
+        ├── created_at      TIMESTAMP DEFAULT NOW()
+        ├── updated_at      TIMESTAMP
+        └── last_login      TIMESTAMP
+
+        TABLE: membership_tiers
+        ├── id              UUID PRIMARY KEY
+        ├── name            VARCHAR(50) NOT NULL (Basic, Pro, Elite)
+        ├── price_monthly   DECIMAL(10,2)
+        ├── price_yearly    DECIMAL(10,2)
+        ├── features        JSONB
+        ├── ai_access       BOOLEAN DEFAULT FALSE
+        └── created_at      TIMESTAMP DEFAULT NOW()
+
+        TABLE: user_memberships
+        ├── id              UUID PRIMARY KEY
+        ├── user_id         UUID REFERENCES users(id)
+        ├── tier_id         UUID REFERENCES membership_tiers(id)
+        ├── status          ENUM('active', 'cancelled', 'expired')
+        ├── start_date      DATE
+        ├── end_date        DATE
+        └── auto_renew      BOOLEAN DEFAULT TRUE
+
+        TABLE: saved_workout_plans
+        ├── id              UUID PRIMARY KEY
+        ├── user_id         UUID REFERENCES users(id)
+        ├── title           VARCHAR(200)
+        ├── goal            ENUM('muscle_gain', 'fat_loss', 'endurance', 'flexibility')
+        ├── difficulty      ENUM('beginner', 'intermediate', 'advanced')
+        ├── plan_data       JSONB
+        ├── ai_generated    BOOLEAN DEFAULT FALSE
+        ├── created_at      TIMESTAMP DEFAULT NOW()
+        └── updated_at      TIMESTAMP
+
+        TABLE: meal_plan_history
+        ├── id              UUID PRIMARY KEY
+        ├── user_id         UUID REFERENCES users(id)
+        ├── title           VARCHAR(200)
+        ├── dietary_prefs   JSONB (vegetarian, vegan, keto, etc.)
+        ├── calorie_target  INTEGER
+        ├── plan_data       JSONB
+        ├── ai_generated    BOOLEAN DEFAULT FALSE
+        ├── created_at      TIMESTAMP DEFAULT NOW()
+        └── week_of         DATE
+
+        TABLE: ai_conversation_logs
+        ├── id              UUID PRIMARY KEY
+        ├── user_id         UUID REFERENCES users(id)
+        ├── session_id      UUID
+        ├── message_type    ENUM('user', 'assistant')
+        ├── content         TEXT
+        ├── context         JSONB
+        ├── tokens_used     INTEGER
+        └── created_at      TIMESTAMP DEFAULT NOW()
+
+        TABLE: tracking_metrics
+        ├── id              UUID PRIMARY KEY
+        ├── user_id         UUID REFERENCES users(id)
+        ├── metric_type     ENUM('weight', 'body_fat', 'measurements', 'workout_completed', 'calories')
+        ├── value           DECIMAL(10,2)
+        ├── unit            VARCHAR(20)
+        ├── notes           TEXT
+        └── recorded_at     TIMESTAMP DEFAULT NOW()
+
+        TABLE: workouts_library
+        ├── id              UUID PRIMARY KEY
+        ├── title           VARCHAR(200)
+        ├── description     TEXT
+        ├── category        VARCHAR(50)
+        ├── difficulty      ENUM('beginner', 'intermediate', 'advanced')
+        ├── duration_mins   INTEGER
+        ├── video_url       TEXT
+        ├── thumbnail_url   TEXT
+        ├── equipment       JSONB
+        ├── muscles_targeted JSONB
+        └── created_at      TIMESTAMP DEFAULT NOW()
+
+        RELATIONSHIPS:
+        - users (1) ──< (many) user_memberships
+        - users (1) ──< (many) saved_workout_plans
+        - users (1) ──< (many) meal_plan_history
+        - users (1) ──< (many) ai_conversation_logs
+        - users (1) ──< (many) tracking_metrics
+        - membership_tiers (1) ──< (many) user_memberships
+        */
+
+        // ==========================================
+        // RECOMMENDED FILE STRUCTURE
+        // ==========================================
+        /*
+        /fitmind
+        ├── /src
+        │   ├── /pages
+        │   │   ├── index.jsx          # Home page
+        │   │   ├── workouts.jsx       # Workout library
+        │   │   ├── ai.jsx             # AI Trainer chat
+        │   │   ├── diet.jsx           # Meal planning
+        │   │   ├── pricing.jsx        # Subscription tiers
+        │   │   ├── login.jsx          # Authentication
+        │   │   ├── signup.jsx         # Registration
+        │   │   ├── contact.jsx        # Support form
+        │   │   └── dashboard.jsx      # User dashboard
+        │   │
+        │   ├── /components
+        │   │   ├── Navbar.jsx         # Navigation
+        │   │   ├── Footer.jsx         # Site footer
+        │   │   ├── WorkoutCard.jsx    # Workout display card
+        │   │   ├── ChatUI.jsx         # AI chat interface
+        │   │   ├── PricingTable.jsx   # Pricing comparison
+        │   │   ├── ProgressChart.jsx  # Tracking visualization
+        │   │   ├── MealCard.jsx       # Meal display
+        │   │   └── Modal.jsx          # Reusable modal
+        │   │
+        │   ├── /lib
+        │   │   ├── ai.js              # AI API integration
+        │   │   ├── auth.js            # Authentication logic
+        │   │   ├── db.js              # Database queries
+        │   │   └── utils.js           # Helper functions
+        │   │
+        │   ├── /data
+        │   │   ├── demoResponses.js   # Scripted AI responses
+        │   │   ├── demoWorkouts.json  # Sample workouts
+        │   │   └── demoMeals.json     # Sample meals
+        │   │
+        │   └── /styles
+        │       └── globals.css        # Global styles
+        │
+        ├── /public
+        │   ├── /images
+        │   └── /icons
+        │
+        ├── .env                       # Environment variables
+        ├── package.json
+        └── README.md
+        */
+    </script>
+
+    <!-- Navigation -->
+    <nav id="navbar" class="bg-white shadow-sm fixed w-full top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center cursor-pointer" onclick="showPage('home')">
+                    <div class="w-10 h-10 gradient-bg rounded-xl flex items-center justify-center">
+                        <i class="fas fa-brain text-white text-lg"></i>
+                    </div>
+                    <span class="ml-3 text-xl font-bold gradient-text">FitMind</span>
+                </div>
+                
+                <div class="hidden md:flex items-center space-x-8">
+                    <a onclick="showPage('home')" class="nav-link cursor-pointer text-gray-600 hover:text-purple-600 transition pb-1">Home</a>
+                    <a onclick="showPage('workouts')" class="nav-link cursor-pointer text-gray-600 hover:text-purple-600 transition pb-1">Workouts</a>
+                    <a onclick="showPage('ai')" class="nav-link cursor-pointer text-gray-600 hover:text-purple-600 transition pb-1">AI Trainer</a>
+                    <a onclick="showPage('diet')" class="nav-link cursor-pointer text-gray-600 hover:text-purple-600 transition pb-1">Nutrition</a>
+                    <a onclick="showPage('pricing')" class="nav-link cursor-pointer text-gray-600 hover:text-purple-600 transition pb-1">Pricing</a>
+                    <a onclick="showPage('contact')" class="nav-link cursor-pointer text-gray-600 hover:text-purple-600 transition pb-1">Contact</a>
+                </div>
+
+                <div class="flex items-center space-x-4">
+                    <span id="modeIndicator" class="hidden sm:inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                        <i class="fas fa-flask mr-1"></i> Demo Mode
+                    </span>
+                    <button onclick="showPage('login')" class="text-gray-600 hover:text-purple-600 font-medium">Log In</button>
+                    <button onclick="showPage('signup')" class="gradient-bg text-white px-4 py-2 rounded-lg font-medium hover:opacity-90 transition">Join Free</button>
+                    <button onclick="toggleMobileMenu()" class="md:hidden text-gray-600">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Menu -->
+        <div id="mobileMenu" class="hidden md:hidden bg-white border-t">
+            <div class="px-4 py-3 space-y-3">
+                <a onclick="showPage('home'); toggleMobileMenu()" class="block text-gray-600 hover:text-purple-600">Home</a>
+                <a onclick="showPage('workouts'); toggleMobileMenu()" class="block text-gray-600 hover:text-purple-600">Workouts</a>
+                <a onclick="showPage('ai'); toggleMobileMenu()" class="block text-gray-600 hover:text-purple-600">AI Trainer</a>
+                <a onclick="showPage('diet'); toggleMobileMenu()" class="block text-gray-600 hover:text-purple-600">Nutrition</a>
+                <a onclick="showPage('pricing'); toggleMobileMenu()" class="block text-gray-600 hover:text-purple-600">Pricing</a>
+                <a onclick="showPage('contact'); toggleMobileMenu()" class="block text-gray-600 hover:text-purple-600">Contact</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ==========================================
+         HOME PAGE
+         ========================================== -->
+    <section id="page-home" class="page pt-16">
+        <!-- Hero Section -->
+        <div class="hero-pattern bg-gradient-to-br from-purple-50 via-white to-indigo-50">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32">
+                <div class="grid lg:grid-cols-2 gap-12 items-center">
+                    <div>
+                        <div class="inline-flex items-center px-4 py-2 bg-purple-100 rounded-full text-purple-700 text-sm font-medium mb-6">
+                            <i class="fas fa-sparkles mr-2"></i> AI-Powered Personal Training
+                        </div>
+                        <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight">
+                            Your Mind & Body,
+                            <span class="gradient-text">Transformed</span>
+                        </h1>
+                        <p class="mt-6 text-xl text-gray-600 leading-relaxed">
+                            FitMind combines expert fitness coaching with cutting-edge AI to deliver personalized workout plans, nutrition guidance, and real-time motivation—all in one powerful platform.
+                        </p>
+                        <div class="mt-8 flex flex-col sm:flex-row gap-4">
+                            <button onclick="showPage('signup')" class="gradient-bg text-white px-8 py-4 rounded-xl font-semibold text-lg hover:opacity-90 transition shadow-lg shadow-purple-500/30">
+                                Start Your Journey <i class="fas fa-arrow-right ml-2"></i>
+                            </button>
+                            <button onclick="showPage('ai')" class="bg-white text-purple-600 px-8 py-4 rounded-xl font-semibold text-lg border-2 border-purple-200 hover:border-purple-400 transition">
+                                <i class="fas fa-robot mr-2"></i> Try AI Demo
+                            </button>
+                        </div>
+                        <div class="mt-10 flex items-center gap-6">
+                            <div class="flex -space-x-3">
+                                <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100" class="w-10 h-10 rounded-full border-2 border-white object-cover">
+                                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100" class="w-10 h-10 rounded-full border-2 border-white object-cover">
+                                <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100" class="w-10 h-10 rounded-full border-2 border-white object-cover">
+                                <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100" class="w-10 h-10 rounded-full border-2 border-white object-cover">
+                            </div>
+                            <div class="text-sm text-gray-600">
+                                <span class="font-semibold text-gray-900">10,000+</span> members achieving their goals
+                            </div>
+                        </div>
+                    </div>
+                    <div class="relative">
+                        <div class="absolute inset-0 gradient-bg rounded-3xl transform rotate-3 opacity-20"></div>
+                        <img src="https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=800" alt="Fitness Training" class="relative rounded-3xl shadow-2xl object-cover w-full h-[500px]">
+                        <div class="absolute -bottom-6 -left-6 bg-white rounded-2xl shadow-xl p-4 flex items-center gap-3">
+                            <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-fire text-green-600 text-xl"></i>
+                            </div>
+                            <div>
+                                <div class="text-2xl font-bold text-gray-900">2,847</div>
+                                <div class="text-sm text-gray-500">Calories burned today</div>
+                            </div>
+                        </div>
+                        <div class="absolute -top-4 -right-4 bg-white rounded-2xl shadow-xl p-4">
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-brain text-purple-600"></i>
+                                <span class="font-semibold text-gray-900">AI Active</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Benefits Section -->
+        <div class="bg-white py-20">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-16">
+                    <h2 class="text-3xl md:text-4xl font-bold text-gray-900">Why FitMind Works</h2>
+                    <p class="mt-4 text-xl text-gray-600 max-w-2xl mx-auto">
+                        We've combined the best of human expertise and artificial intelligence to create a fitness experience that actually delivers results.
+                    </p>
+                </div>
+                <div class="grid md:grid-cols-3 gap-8">
+                    <div class="card-hover bg-gradient-to-br from-purple-50 to-indigo-50 rounded-2xl p-8">
+                        <div class="w-14 h-14 gradient-bg rounded-xl flex items-center justify-center mb-6">
+                            <i class="fas fa-bullseye text-white text-2xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-900 mb-3">Personalized Plans</h3>
+                        <p class="text-gray-600">
+                            Our AI analyzes your goals, fitness level, and preferences to create workout and nutrition plans tailored specifically to you—not generic templates.
+                        </p>
+                    </div>
+                    <div class="card-hover bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-8">
+                        <div class="w-14 h-14 bg-green-500 rounded-xl flex items-center justify-center mb-6">
+                            <i class="fas fa-users text-white text-2xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-900 mb-3">Real Accountability</h3>
+                        <p class="text-gray-600">
+                            Stay on track with progress tracking, weekly check-ins, and an AI coach that remembers your journey and celebrates your wins with you.
+                        </p>
+                    </div>
+                    <div class="card-hover bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl p-8">
+                        <div class="w-14 h-14 bg-orange-500 rounded-xl flex items-center justify-center mb-6">
+                            <i class="fas fa-clock text-white text-2xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-900 mb-3">Flexible & Convenient</h3>
+                        <p class="text-gray-600">
+                            Work out on your schedule, anywhere. Access your plans, videos, and AI trainer 24/7 from any device. Fitness that fits your life.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Features Preview -->
+        <div class="bg-gray-50 py-20">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="grid lg:grid-cols-2 gap-16 items-center">
+                    <div>
+                        <h2 class="text-3xl md:text-4xl font-bold text-gray-900">
+                            Meet Your AI Personal Trainer
+                        </h2>
+                        <p class="mt-6 text-lg text-gray-600">
+                            Available 24/7, our AI trainer understands your unique needs and adapts to your progress. Ask questions, get motivation, and receive expert guidance—all through a simple conversation.
+                        </p>
+                        <ul class="mt-8 space-y-4">
+                            <li class="flex items-start gap-4">
+                                <div class="w-6 h-6 gradient-bg rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                                    <i class="fas fa-check text-white text-xs"></i>
+                                </div>
+                                <span class="text-gray-700">Custom workout plans based on your goals and equipment</span>
+                            </li>
+                            <li class="flex items-start gap-4">
+                                <div class="w-6 h-6 gradient-bg rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                                    <i class="fas fa-check text-white text-xs"></i>
+                                </div>
+                                <span class="text-gray-700">Nutritional guidance tailored to your dietary preferences</span>
+                            </li>
+                            <li class="flex items-start gap-4">
+                                <div class="w-6 h-6 gradient-bg rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                                    <i class="fas fa-check text-white text-xs"></i>
+                                </div>
+                                <span class="text-gray-700">Form corrections and exercise alternatives when needed</span>
+                            </li>
+                            <li class="flex items-start gap-4">
+                                <div class="w-6 h-6 gradient-bg rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                                    <i class="fas fa-check text-white text-xs"></i>
+                                </div>
+                                <span class="text-gray-700">Weekly motivational messages to keep you inspired</span>
+                            </li>
+                        </ul>
+                        <button onclick="showPage('ai')" class="mt-8 gradient-bg text-white px-6 py-3 rounded-xl font-semibold hover:opacity-90 transition">
+                            Try the AI Trainer <i class="fas fa-arrow-right ml-2"></i>
+                        </button>
+                    </div>
+                    <div class="bg-white rounded-2xl shadow-xl p-6">
+                        <div class="flex items-center gap-3 mb-6 pb-4 border-b">
+                            <div class="w-10 h-10 gradient-bg rounded-full flex items-center justify-center">
+                                <i class="fas fa-robot text-white"></i>
+                            </div>
+                            <div>
+                                <div class="font-semibold text-gray-900">FitMind AI</div>
+                                <div class="text-sm text-green-600"><i class="fas fa-circle text-xs mr-1"></i> Online</div>
+                            </div>
+                        </div>
+                        <div class="space-y-4">
+                            <div class="flex justify-end">
+                                <div class="bg-purple-100 text-purple-900 rounded-2xl rounded-tr-sm px-4 py-3 max-w-xs">
+                                    I want to lose 15 pounds and build muscle. Where do I start?
+                                </div>
+                            </div>
+                            <div class="flex justify-start">
+                                <div class="bg-gray-100 text-gray-800 rounded-2xl rounded-tl-sm px-4 py-3 max-w-sm">
+                                    Great goal! I recommend starting with 3 strength training sessions and 2 cardio days per week. Let me create a personalized plan based on your schedule and equipment access. What days work best for you?
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Section -->
+        <div class="gradient-bg py-16">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center text-white">
+                    <div>
+                        <div class="text-4xl md:text-5xl font-bold">10K+</div>
+                        <div class="mt-2 text-purple-200">Active Members</div>
+                    </div>
+                    <div>
+                        <div class="text-4xl md:text-5xl font-bold">500+</div>
+                        <div class="mt-2 text-purple-200">Workout Videos</div>
+                    </div>
+                    <div>
+                        <div class="text-4xl md:text-5xl font-bold">95%</div>
+                        <div class="mt-2 text-purple-200">Success Rate</div>
+                    </div>
+                    <div>
+                        <div class="text-4xl md:text-5xl font-bold">24/7</div>
+                        <div class="mt-2 text-purple-200">AI Support</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Testimonials -->
+        <div class="bg-white py-20">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-16">
+                    <h2 class="text-3xl md:text-4xl font-bold text-gray-900">Real Results, Real People</h2>
+                    <p class="mt-4 text-xl text-gray-600">See what our members are saying about their FitMind experience.</p>
+                </div>
+                <div class="grid md:grid-cols-3 gap-8">
+                    <div class="card-hover bg-gray-50 rounded-2xl p-8">
+                        <div class="flex items-center gap-1 text-yellow-400 mb-4">
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                        </div>
+                        <p class="text-gray-700 mb-6">
+                            "The AI trainer understood exactly what I needed. In 3 months, I lost 20 pounds and gained confidence I never knew I had. FitMind changed my relationship with fitness."
+                        </p>
+                        <div class="flex items-center gap-4">
+                            <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100" class="w-12 h-12 rounded-full object-cover">
+                            <div>
+                                <div class="font-semibold text-gray-900">Sarah Mitchell</div>
+                                <div class="text-sm text-gray-500">Lost 20 lbs in 3 months</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-hover bg-gray-50 rounded-2xl p-8">
+                        <div class="flex items-center gap-1 text-yellow-400 mb-4">
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                        </div>
+                        <p class="text-gray-700 mb-6">
+                            "As a busy professional, I never had time for the gym. FitMind's flexible workouts and meal plans fit perfectly into my schedule. The AI keeps me accountable without being pushy."
+                        </p>
+                        <div class="flex items-center gap-4">
+                            <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100" class="w-12 h-12 rounded-full object-cover">
+                            <div>
+                                <div class="font-semibold text-gray-900">James Rodriguez</div>
+                                <div class="text-sm text-gray-500">Gained 15 lbs muscle</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-hover bg-gray-50 rounded-2xl p-8">
+                        <div class="flex items-center gap-1 text-yellow-400 mb-4">
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                        </div>
+                        <p class="text-gray-700 mb-6">
+                            "I've tried dozens of fitness apps. FitMind is different because it actually learns from my progress and adjusts. It's like having a personal trainer in my pocket."
+                        </p>
+                        <div class="flex items-center gap-4">
+                            <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100" class="w-12 h-12 rounded-full object-cover">
+                            <div>
+                                <div class="font-semibold text-gray-900">Emily Chen</div>
+                                <div class="text-sm text-gray-500">Marathon runner</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CTA Section -->
+        <div class="bg-gray-900 py-20">
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                <h2 class="text-3xl md:text-4xl font-bold text-white mb-6">
+                    Ready to Transform Your Life?
+                </h2>
+                <p class="text-xl text-gray-400 mb-8">
+                    Join thousands of members who've already discovered the power of AI-assisted fitness. Start your free trial today.
+                </p>
+                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                    <button onclick="showPage('signup')" class="gradient-bg text-white px-8 py-4 rounded-xl font-semibold text-lg hover:opacity-90 transition">
+                        Get Started Free <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                    <button onclick="showPage('pricing')" class="bg-white/10 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:bg-white/20 transition border border-white/20">
+                        View Pricing
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==========================================
+         WORKOUTS PAGE
+         ========================================== -->
+    <section id="page-workouts" class="page hidden pt-16">
+        <div class="bg-gradient-to-br from-purple-50 via-white to-indigo-50 py-16">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-12">
+                    <h1 class="text-4xl font-bold text-gray-900">Workout Library</h1>
+                    <p class="mt-4 text-xl text-gray-600 max-w-2xl mx-auto">
+                        Over 500 expert-designed workouts for every fitness level. Filter by difficulty, focus area, or equipment to find your perfect routine.
+                    </p>
+                </div>
+
+                <!-- Filters -->
+                <div class="bg-white rounded-2xl shadow-sm p-6 mb-8">
+                    <div class="flex flex-wrap gap-4 items-center justify-between">
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="filterWorkouts('all')" class="filter-btn active px-4 py-2 rounded-lg font-medium bg-purple-100 text-purple-700">All</button>
+                            <button onclick="filterWorkouts('beginner')" class="filter-btn px-4 py-2 rounded-lg font-medium bg-gray-100 text-gray-600 hover:bg-purple-100 hover:text-purple-700 transition">Beginner</button>
+                            <button onclick="filterWorkouts('intermediate')" class="filter-btn px-4 py-2 rounded-lg font-medium bg-gray-100 text-gray-600 hover:bg-purple-100 hover:text-purple-700 transition">Intermediate</button>
+                            <button onclick="filterWorkouts('advanced')" class="filter-btn px-4 py-2 rounded-lg font-medium bg-gray-100 text-gray-600 hover:bg-purple-100 hover:text-purple-700 transition">Advanced</button>
+                        </div>
+                        <div class="flex gap-2">
+                            <select class="px-4 py-2 rounded-lg border border-gray-200 text-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                <option>All Categories</option>
+                                <option>Strength</option>
+                                <option>Cardio</option>
+                                <option>HIIT</option>
+                                <option>Yoga</option>
+                                <option>Flexibility</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Workout Grid -->
+                <div id="workoutGrid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Cards populated by JavaScript -->
+                </div>
+
+                <!-- Load More -->
+                <div class="text-center mt-12">
+                    <button class="bg-white text-purple-600 px-8 py-3 rounded-xl font-semibold border-2 border-purple-200 hover:border-purple-400 transition">
+                        Load More Workouts <i class="fas fa-arrow-down ml-2"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==========================================
+         AI TRAINER PAGE
+         ========================================== -->
+    <section id="page-ai" class="page hidden pt-16">
+        <div class="min-h-screen bg-gradient-to-br from-purple-50 via-white to-indigo-50">
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <!-- Header -->
+                <div class="text-center mb-8">
+                    <div class="inline-flex items-center px-4 py-2 bg-amber-100 text-amber-800 rounded-full text-sm font-medium mb-4">
+                        <i class="fas fa-flask mr-2"></i> <span id="aiModeLabel">Demo Mode Active</span>
+                    </div>
+                    <h1 class="text-3xl md:text-4xl font-bold text-gray-900">AI Personal Trainer</h1>
+                    <p class="mt-3 text-gray-600">Get personalized workout plans, nutrition advice, and motivation—all powered by AI.</p>
+                </div>
+
+                <!-- Chat Container -->
+                <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
+                    <!-- Chat Header -->
+                    <div class="gradient-bg px-6 py-4 flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                                <i class="fas fa-robot text-white text-xl"></i>
+                            </div>
+                            <div class="text-white">
+                                <div class="font-semibold">FitMind AI</div>
+                                <div class="text-sm text-purple-200"><i class="fas fa-circle text-green-400 text-xs mr-1"></i> Ready to help</div>
+                            </div>
+                        </div>
+                        <button onclick="clearChat()" class="text-white/70 hover:text-white transition">
+                            <i class="fas fa-redo"></i>
+                        </button>
+                    </div>
+
+                    <!-- Chat Messages -->
+                    <div id="chatMessages" class="h-96 overflow-y-auto p-6 space-y-4">
+                        <div class="chat-bubble flex justify-start">
+                            <div class="bg-gray-100 text-gray-800 rounded-2xl rounded-tl-sm px-4 py-3 max-w-md">
+                                <p>Hey there! 👋 I'm your FitMind AI trainer. I'm here to help you achieve your fitness goals.</p>
+                                <p class="mt-2">What would you like to work on today? You can ask me about:</p>
+                                <ul class="mt-2 ml-4 list-disc text-sm">
+                                    <li>Personalized workout plans</li>
+                                    <li>Nutrition and meal planning</li>
+                                    <li>Exercise form and techniques</li>
+                                    <li>Motivation and goal setting</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Prompts -->
+                    <div class="px-6 py-3 border-t border-gray-100">
+                        <div class="text-xs text-gray-500 mb-2">Suggested prompts:</div>
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="sendQuickPrompt('Create a 4-week fat loss workout plan')" class="text-sm bg-purple-50 text-purple-700 px-3 py-1.5 rounded-full hover:bg-purple-100 transition">
+                                🔥 Fat loss plan
+                            </button>
+                            <button onclick="sendQuickPrompt('Design a muscle building routine for beginners')" class="text-sm bg-purple-50 text-purple-700 px-3 py-1.5 rounded-full hover:bg-purple-100 transition">
+                                💪 Build muscle
+                            </button>
+                            <button onclick="sendQuickPrompt('Give me a healthy meal plan for the week')" class="text-sm bg-purple-50 text-purple-700 px-3 py-1.5 rounded-full hover:bg-purple-100 transition">
+                                🥗 Meal plan
+                            </button>
+                            <button onclick="sendQuickPrompt('I need motivation to stay consistent')" class="text-sm bg-purple-50 text-purple-700 px-3 py-1.5 rounded-full hover:bg-purple-100 transition">
+                                ⚡ Motivation
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Chat Input -->
+                    <div class="px-6 py-4 border-t border-gray-100">
+                        <form onsubmit="sendMessage(event)" class="flex gap-3">
+                            <input type="text" id="chatInput" placeholder="Ask me anything about fitness..." class="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                            <button type="submit" class="gradient-bg text-white px-6 py-3 rounded-xl font-medium hover:opacity-90 transition">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- AI Features -->
+                <div class="grid md:grid-cols-3 gap-4 mt-8">
+                    <div class="bg-white rounded-xl p-5 shadow-sm">
+                        <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mb-3">
+                            <i class="fas fa-dumbbell text-purple-600"></i>
+                        </div>
+                        <h3 class="font-semibold text-gray-900">Workout Generator</h3>
+                        <p class="text-sm text-gray-600 mt-1">Custom plans based on your goals, equipment, and schedule.</p>
+                    </div>
+                    <div class="bg-white rounded-xl p-5 shadow-sm">
+                        <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mb-3">
+                            <i class="fas fa-apple-alt text-green-600"></i>
+                        </div>
+                        <h3 class="font-semibold text-gray-900">Diet Assistant</h3>
+                        <p class="text-sm text-gray-600 mt-1">Personalized meal suggestions and macro calculations.</p>
+                    </div>
+                    <div class="bg-white rounded-xl p-5 shadow-sm">
+                        <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mb-3">
+                            <i class="fas fa-heart text-orange-600"></i>
+                        </div>
+                        <h3 class="font-semibold text-gray-900">Motivation Coach</h3>
+                        <p class="text-sm text-gray-600 mt-1">Daily inspiration and accountability support.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==========================================
+         DIET & NUTRITION PAGE
+         ========================================== -->
+    <section id="page-diet" class="page hidden pt-16">
+        <div class="bg-gradient-to-br from-green-50 via-white to-emerald-50 py-16">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-12">
+                    <h1 class="text-4xl font-bold text-gray-900">Nutrition & Meal Planning</h1>
+                    <p class="mt-4 text-xl text-gray-600 max-w-2xl mx-auto">
+                        Fuel your fitness journey with delicious, nutritious meals. Use our AI to generate personalized meal plans that match your goals.
+                    </p>
+                </div>
+
+                <!-- AI Meal Plan Generator -->
+                <div class="bg-white rounded-2xl shadow-xl p-8 mb-12">
+                    <div class="flex items-center gap-4 mb-6">
+                        <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-magic text-green-600 text-xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold text-gray-900">AI Meal Plan Generator</h2>
+                            <p class="text-gray-600">Tell us your preferences and get a custom meal plan instantly.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid md:grid-cols-4 gap-4 mb-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Goal</label>
+                            <select id="mealGoal" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500">
+                                <option value="weight_loss">Weight Loss</option>
+                                <option value="muscle_gain">Muscle Gain</option>
+                                <option value="maintenance">Maintenance</option>
+                                <option value="energy">Energy & Performance</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Dietary Preference</label>
+                            <select id="dietPref" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500">
+                                <option value="standard">No Restrictions</option>
+                                <option value="vegetarian">Vegetarian</option>
+                                <option value="vegan">Vegan</option>
+                                <option value="keto">Keto</option>
+                                <option value="paleo">Paleo</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Daily Calories</label>
+                            <select id="calories" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500">
+                                <option value="1500">1,500 cal</option>
+                                <option value="1800">1,800 cal</option>
+                                <option value="2000" selected>2,000 cal</option>
+                                <option value="2500">2,500 cal</option>
+                                <option value="3000">3,000 cal</option>
+                            </select>
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="generateMealPlan()" class="w-full bg-green-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-green-700 transition">
+                                <i class="fas fa-wand-magic-sparkles mr-2"></i> Generate Plan
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Generated Meal Plan -->
+                    <div id="mealPlanResult" class="hidden">
+                        <div class="border-t pt-6">
+                            <h3 class="font-bold text-gray-900 mb-4">Your Personalized Meal Plan</h3>
+                            <div id="mealPlanContent" class="grid md:grid-cols-3 gap-4">
+                                <!-- Content populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Meal Ideas Grid -->
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">Popular Healthy Recipes</h2>
+                <div id="mealGrid" class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <!-- Meals populated by JavaScript -->
+                </div>
+
+                <!-- Nutrition Tips -->
+                <div class="mt-16 bg-white rounded-2xl shadow-sm p-8">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Quick Nutrition Tips</h2>
+                    <div class="grid md:grid-cols-4 gap-6">
+                        <div class="text-center">
+                            <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-tint text-blue-600 text-2xl"></i>
+                            </div>
+                            <h3 class="font-semibold text-gray-900">Stay Hydrated</h3>
+                            <p class="text-sm text-gray-600 mt-2">Aim for 8 glasses of water daily. Proper hydration boosts metabolism and energy.</p>
+                        </div>
+                        <div class="text-center">
+                            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-leaf text-green-600 text-2xl"></i>
+                            </div>
+                            <h3 class="font-semibold text-gray-900">Eat Your Greens</h3>
+                            <p class="text-sm text-gray-600 mt-2">Fill half your plate with vegetables for fiber, vitamins, and minerals.</p>
+                        </div>
+                        <div class="text-center">
+                            <div class="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-drumstick-bite text-orange-600 text-2xl"></i>
+                            </div>
+                            <h3 class="font-semibold text-gray-900">Protein Priority</h3>
+                            <p class="text-sm text-gray-600 mt-2">Include lean protein with every meal to support muscle growth and satiety.</p>
+                        </div>
+                        <div class="text-center">
+                            <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-clock text-purple-600 text-2xl"></i>
+                            </div>
+                            <h3 class="font-semibold text-gray-900">Meal Timing</h3>
+                            <p class="text-sm text-gray-600 mt-2">Eat every 3-4 hours to maintain energy levels and prevent overeating.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==========================================
+         PRICING PAGE
+         ========================================== -->
+    <section id="page-pricing" class="page hidden pt-16">
+        <div class="bg-gradient-to-br from-purple-50 via-white to-indigo-50 py-16">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-12">
+                    <h1 class="text-4xl font-bold text-gray-900">Simple, Transparent Pricing</h1>
+                    <p class="mt-4 text-xl text-gray-600 max-w-2xl mx-auto">
+                        Choose the plan that fits your fitness journey. All plans include a 7-day free trial.
+                    </p>
+                    <!-- Billing Toggle -->
+                    <div class="mt-8 flex items-center justify-center gap-4">
+                        <span class="text-gray-600">Monthly</span>
+                        <button id="billingToggle" onclick="toggleBilling()" class="relative w-14 h-8 bg-purple-600 rounded-full transition">
+                            <span id="billingDot" class="absolute right-1 top-1 w-6 h-6 bg-white rounded-full transition-all"></span>
+                        </button>
+                        <span class="text-gray-600">Yearly <span class="text-green-600 font-medium">(Save 20%)</span></span>
+                    </div>
+                </div>
+
+                <!-- Pricing Cards -->
+                <div class="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+                    <!-- Basic Plan -->
+                    <div class="bg-white rounded-2xl shadow-lg p-8 card-hover">
+                        <div class="text-center">
+                            <h3 class="text-xl font-bold text-gray-900">Basic</h3>
+                            <p class="text-gray-600 mt-2">Perfect for getting started</p>
+                            <div class="mt-6">
+                                <span class="text-4xl font-bold text-gray-900" id="basicPrice">$19</span>
+                                <span class="text-gray-600" id="basicPeriod">/month</span>
+                            </div>
+                        </div>
+                        <ul class="mt-8 space-y-4">
+                            <li class="flex items-center gap-3">
+                                <i class="fas fa-check text-green-500"></i>
+                                <span class="text-gray-700">Access to workout library</span>
+                            </li>
+                            <li class="flex items-center gap-3">
+                                <i class="fas fa-check text-green-500"></i>
+                                <span class="text-gray-700">Basic progress tracking</span>
+                            </li>
+                            <li class="flex items-center gap-3">
+                                <i class="fas fa-check text-green-500"></i>
+                                <span class="text-gray-700">Nutrition guides & recipes</span>
+                            </li>
+                            <li class="flex items-center gap-3">
+                                <i class="fas fa-check text-green-500"></i>
+                                <span class="text-gray-700">Community forum access</span>
+                            </li>
+                            <li class="flex items-center gap-3 text-gray-400">
+                                <i class="fas fa-times"></i>
+                                <span>AI Personal Trainer</span>
+                            </li>
+                            <li class="flex items-center gap-3 text-gray-400">
+                                <i class="fas fa-times"></i>
+                                <span>Custom meal plans</span>
+                            </li>
+                        </ul>
+                        <button onclick="showPage('signup')" class="mt-8 w-full py-3 rounded-xl font-semibold border-2 border-purple-200 text-purple-600 hover:bg-purple-50 transition">
+                            Start Free Trial
+                        </button>
+                    </div>
+
+                    <!-- Pro Plan -->
+                    <div class="bg-gradient-to-br from-purple-600 to-indigo-600 rounded-2xl shadow-xl p-8 card-hover relative transform scale-105">
+                        <div class="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                            <span class="bg-gradient-to-r from-yellow-400 to-orange-400 text-white text-sm font-bold px-4 py-1 rounded-full">MOST POPULAR</span>
+                        </div>
+                        <div class="text-center text-white">
+                            <h3 class="text-xl font-bold">Pro</h3>
+                            <p class="text-purple-200 mt-2">Best value for serious results</p>
+                            <div class="mt-6">
+                                <span class="text-4xl font-bold" id="proPrice">$39</span>
+                                <span class="text-purple-200" id="proPeriod">/month</span>
+                            </div>
+                        </div>
+                        <ul class="mt-8 space-y-4 text-white">
+                            <li class="flex items-center gap-3">
+                                <i class="fas fa-check text-green-300"></i>
+                                <span>Everything in Basic</span>
+                            </li>
+                            <li class="flex items-center gap-3">
+                                <i class="fas fa-check text-green-300"></i>
+                                <span class="font-semibold">AI Personal Trainer</span>
+                            </li>
+                            <li class="flex items-center gap-3">
+                                <i class="fas fa-check text-green-300"></i>
+                                <span>Custom workout plans</span>
+                            </li>
+                            <li class="flex items-center gap-3">
+                                <i class="fas fa-check text-green-300"></i>
+                                <span>AI meal plan generator</span>
+                            </li>
+                            <li class="flex items-center gap-3">
+                                <i class="fas fa-check text-green-300"></i>
+                                <span>Advanced analytics</span>
+                            </li>
+                            <li class="flex items-center gap-3">
+                                <i class="fas fa-check text-green-300"></i>
+                                <span>Priority support</span>
+                            </li>
+                        </ul>
+                        <button onclick="showPage('signup')" class="mt-8 w-full py-3 rounded-xl font-semibold bg-white text-purple-600 hover:bg-gray-100 transition">
+                            Start Free Trial
+                        </button>
+                    </div>
+
+                    <!-- Elite Plan -->
+                    <div class="bg-white rounded-2xl shadow-lg p-8 card-hover">
+                        <div class="text-center">
+                            <h3 class="text-xl font-bold text-gray-900">Elite</h3>
+                            <p class="text-gray-600 mt-2">For maximum transformation</p>
+                            <div class="mt-6">
+                                <span class="text-4xl font-bold text-gray-900" id="elitePrice">$79</span>
+                                <span class="text-gray-600" id="elitePeriod">/month</span>
+                            </div>
+                        </div>
+                        <ul class="mt-8 space-y-4">
+                            <li class="flex items-center gap-3">
+                                <i class="fas fa-check text-green-500"></i>
+                                <span class="text-gray-700">Everything in Pro</span>
+                            </li>
+                            <li class="flex items-center gap-3">
+                                <i class="fas fa-check text-green-500"></i>
+                                <span class="text-gray-700 font-semibold">1-on-1 video coaching calls</span>
+                            </li>
+                            <li class="flex items-center gap-3">
+                                <i class="fas fa-check text-green-500"></i>
+                                <span class="text-gray-700">Personalized supplement guide</span>
+                            </li>
+                            <li class="flex items-center gap-3">
+                                <i class="fas fa-check text-green-500"></i>
+                                <span class="text-gray-700">VIP community access</span>
+                            </li>
+                            <li class="flex items-center gap-3">
+                                <i class="fas fa-check text-green-500"></i>
+                                <span class="text-gray-700">Weekly check-ins</span>
+                            </li>
+                            <li class="flex items-center gap-3">
+                                <i class="fas fa-check text-green-500"></i>
+                                <span class="text-gray-700">Money-back guarantee</span>
+                            </li>
+                        </ul>
+                        <button onclick="showPage('signup')" class="mt-8 w-full py-3 rounded-xl font-semibold border-2 border-purple-200 text-purple-600 hover:bg-purple-50 transition">
+                            Start Free Trial
+                        </button>
+                    </div>
+                </div>
+
+                <!-- FAQ -->
+                <div class="mt-20 max-w-3xl mx-auto">
+                    <h2 class="text-2xl font-bold text-gray-900 text-center mb-8">Frequently Asked Questions</h2>
+                    <div class="space-y-4">
+                        <div class="bg-white rounded-xl p-6 shadow-sm">
+                            <h3 class="font-semibold text-gray-900">Can I cancel anytime?</h3>
+                            <p class="text-gray-600 mt-2">Yes! You can cancel your subscription at any time with no cancellation fees. Your access continues until the end of your billing period.</p>
+                        </div>
+                        <div class="bg-white rounded-xl p-6 shadow-sm">
+                            <h3 class="font-semibold text-gray-900">What's included in the free trial?</h3>
+                            <p class="text-gray-600 mt-2">Your 7-day free trial includes full access to all features of your chosen plan. No credit card required to start.</p>
+                        </div>
+                        <div class="bg-white rounded-xl p-6 shadow-sm">
+                            <h3 class="font-semibold text-gray-900">How does the AI trainer work?</h3>
+                            <p class="text-gray-600 mt-2">Our AI analyzes your goals, fitness level, and preferences to create personalized recommendations. It learns from your feedback to improve over time.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==========================================
+         LOGIN PAGE
+         ========================================== -->
+    <section id="page-login" class="page hidden pt-16">
+        <div class="min-h-screen bg-gradient-to-br from-purple-50 via-white to-indigo-50 flex items-center justify-center py-12 px-4">
+            <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
+                <div class="text-center mb-8">
+                    <div class="w-16 h-16 gradient-bg rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-brain text-white text-2xl"></i>
+                    </div>
+                    <h1 class="text-2xl font-bold text-gray-900">Welcome Back</h1>
+                    <p class="text-gray-600 mt-2">Log in to continue your fitness journey</p>
+                </div>
+
+                <form onsubmit="handleLogin(event)" class="space-y-5">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                        <input type="email" id="loginEmail" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="you@example.com">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                        <input type="password" id="loginPassword" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="••••••••">
+                    </div>
+                    <div class="flex items-center justify-between text-sm">
+                        <label class="flex items-center gap-2 text-gray-600">
+                            <input type="checkbox" class="rounded border-gray-300 text-purple-600 focus:ring-purple-500">
+                            Remember me
+                        </label>
+                        <a href="#" class="text-purple-600 hover:text-purple-700">Forgot password?</a>
+                    </div>
+                    <button type="submit" class="w-full gradient-bg text-white py-3 rounded-xl font-semibold hover:opacity-90 transition">
+                        Log In
+                    </button>
+                </form>
+
+                <div class="mt-6">
+                    <div class="relative">
+                        <div class="absolute inset-0 flex items-center">
+                            <div class="w-full border-t border-gray-200"></div>
+                        </div>
+                        <div class="relative flex justify-center text-sm">
+                            <span class="px-4 bg-white text-gray-500">Or continue with</span>
+                        </div>
+                    </div>
+                    <div class="mt-4 grid grid-cols-2 gap-3">
+                        <button class="flex items-center justify-center gap-2 py-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition">
+                            <i class="fab fa-google text-red-500"></i>
+                            <span class="text-gray-700 font-medium">Google</span>
+                        </button>
+                        <button class="flex items-center justify-center gap-2 py-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition">
+                            <i class="fab fa-apple text-gray-900"></i>
+                            <span class="text-gray-700 font-medium">Apple</span>
+                        </button>
+                    </div>
+                </div>
+
+                <p class="mt-8 text-center text-gray-600">
+                    Don't have an account? <a onclick="showPage('signup')" class="text-purple-600 hover:text-purple-700 font-medium cursor-pointer">Sign up free</a>
+                </p>
+
+                <!-- Demo Login Info -->
+                <div class="mt-6 p-4 bg-amber-50 rounded-xl border border-amber-200">
+                    <div class="flex items-start gap-3">
+                        <i class="fas fa-info-circle text-amber-600 mt-0.5"></i>
+                        <div class="text-sm">
+                            <p class="font-medium text-amber-800">Demo Credentials</p>
+                            <p class="text-amber-700 mt-1">Email: demo@fitmind.com<br>Password: demo123</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==========================================
+         SIGNUP PAGE
+         ========================================== -->
+    <section id="page-signup" class="page hidden pt-16">
+        <div class="min-h-screen bg-gradient-to-br from-purple-50 via-white to-indigo-50 flex items-center justify-center py-12 px-4">
+            <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
+                <div class="text-center mb-8">
+                    <div class="w-16 h-16 gradient-bg rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-brain text-white text-2xl"></i>
+                    </div>
+                    <h1 class="text-2xl font-bold text-gray-900">Create Your Account</h1>
+                    <p class="text-gray-600 mt-2">Start your 7-day free trial today</p>
+                </div>
+
+                <form onsubmit="handleSignup(event)" class="space-y-5">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                        <input type="text" id="signupName" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="John Doe">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                        <input type="email" id="signupEmail" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="you@example.com">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                        <input type="password" id="signupPassword" required minlength="8" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="Min. 8 characters">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Your Primary Goal</label>
+                        <select id="signupGoal" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                            <option value="weight_loss">Lose Weight</option>
+                            <option value="muscle_gain">Build Muscle</option>
+                            <option value="endurance">Improve Endurance</option>
+                            <option value="flexibility">Increase Flexibility</option>
+                            <option value="general">General Fitness</option>
+                        </select>
+                    </div>
+                    <div class="flex items-start gap-2">
+                        <input type="checkbox" id="terms" required class="mt-1 rounded border-gray-300 text-purple-600 focus:ring-purple-500">
+                        <label for="terms" class="text-sm text-gray-600">
+                            I agree to the <a href="#" class="text-purple-600 hover:underline">Terms of Service</a> and <a href="#" class="text-purple-600 hover:underline">Privacy Policy</a>
+                        </label>
+                    </div>
+                    <button type="submit" class="w-full gradient-bg text-white py-3 rounded-xl font-semibold hover:opacity-90 transition">
+                        Create Free Account
+                    </button>
+                </form>
+
+                <p class="mt-8 text-center text-gray-600">
+                    Already have an account? <a onclick="showPage('login')" class="text-purple-600 hover:text-purple-700 font-medium cursor-pointer">Log in</a>
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==========================================
+         CONTACT PAGE
+         ========================================== -->
+    <section id="page-contact" class="page hidden pt-16">
+        <div class="bg-gradient-to-br from-purple-50 via-white to-indigo-50 py-16">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-12">
+                    <h1 class="text-4xl font-bold text-gray-900">Get in Touch</h1>
+                    <p class="mt-4 text-xl text-gray-600 max-w-2xl mx-auto">
+                        Have questions or need support? Our team is here to help you succeed.
+                    </p>
+                </div>
+
+                <div class="grid lg:grid-cols-2 gap-12">
+                    <!-- Contact Form -->
+                    <div class="bg-white rounded-2xl shadow-xl p-8">
+                        <h2 class="text-xl font-bold text-gray-900 mb-6">Send Us a Message</h2>
+                        <form onsubmit="handleContact(event)" class="space-y-5">
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">First Name</label>
+                                    <input type="text" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="John">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+                                    <input type="text" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Doe">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                                <input type="email" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="you@example.com">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Subject</label>
+                                <select class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                    <option>General Inquiry</option>
+                                    <option>Technical Support</option>
+                                    <option>Billing Question</option>
+                                    <option>Partnership Opportunity</option>
+                                    <option>Feedback</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Message</label>
+                                <textarea rows="5" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none" placeholder="How can we help you?"></textarea>
+                            </div>
+                            <button type="submit" class="w-full gradient-bg text-white py-3 rounded-xl font-semibold hover:opacity-90 transition">
+                                Send Message <i class="fas fa-paper-plane ml-2"></i>
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Contact Info -->
+                    <div>
+                        <div class="bg-white rounded-2xl shadow-xl p-8 mb-8">
+                            <h2 class="text-xl font-bold text-gray-900 mb-6">Contact Information</h2>
+                            <div class="space-y-6">
+                                <div class="flex items-start gap-4">
+                                    <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                                        <i class="fas fa-envelope text-purple-600"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-semibold text-gray-900">Email Support</h3>
+                                        <p class="text-gray-600 mt-1">muthurajp064@gmail.com</p>
+                                        <p class="text-sm text-gray-500 mt-1">We respond within 24 hours</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start gap-4">
+                                    <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                                        <i class="fas fa-clock text-green-600"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-semibold text-gray-900">Support Hours</h3>
+                                        <p class="text-gray-600 mt-1">Monday - Friday: 9 AM - 6 PM EST</p>
+                                        <p class="text-gray-600">Weekend: 10 AM - 4 PM EST</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start gap-4">
+                                    <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                                        <i class="fas fa-comments text-blue-600"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-semibold text-gray-900">Live Chat</h3>
+                                        <p class="text-gray-600 mt-1">Available for Pro & Elite members</p>
+                                        <p class="text-sm text-gray-500 mt-1">Instant support during business hours</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-gradient-to-br from-purple-600 to-indigo-600 rounded-2xl p-8 text-white">
+                            <h2 class="text-xl font-bold mb-4">Join Our Community</h2>
+                            <p class="text-purple-200 mb-6">Connect with thousands of members, share your progress, and get inspired by others on the same journey.</p>
+                            <div class="flex gap-4">
+                                <a href="#" class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center hover:bg-white/30 transition">
+                                    <i class="fab fa-facebook-f"></i>
+                                </a>
+                                <a href="#" class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center hover:bg-white/30 transition">
+                                    <i class="fab fa-instagram"></i>
+                                </a>
+                                <a href="#" class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center hover:bg-white/30 transition">
+                                    <i class="fab fa-twitter"></i>
+                                </a>
+                                <a href="#" class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center hover:bg-white/30 transition">
+                                    <i class="fab fa-youtube"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==========================================
+         DASHBOARD (Post-Login)
+         ========================================== -->
+    <section id="page-dashboard" class="page hidden pt-16">
+        <div class="bg-gray-50 min-h-screen">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <!-- Welcome Header -->
+                <div class="mb-8">
+                    <h1 class="text-3xl font-bold text-gray-900">Welcome back, <span id="userName">Demo User</span>! 👋</h1>
+                    <p class="text-gray-600 mt-2">Here's your fitness overview for today.</p>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="grid md:grid-cols-4 gap-6 mb-8">
+                    <div class="bg-white rounded-xl p-6 shadow-sm">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-fire text-purple-600"></i>
+                            </div>
+                            <span class="text-green-600 text-sm font-medium">+12%</span>
+                        </div>
+                        <div class="text-2xl font-bold text-gray-900">2,847</div>
+                        <div class="text-sm text-gray-600">Calories Burned</div>
+                    </div>
+                    <div class="bg-white rounded-xl p-6 shadow-sm">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-dumbbell text-green-600"></i>
+                            </div>
+                            <span class="text-green-600 text-sm font-medium">+3</span>
+                        </div>
+                        <div class="text-2xl font-bold text-gray-900">18</div>
+                        <div class="text-sm text-gray-600">Workouts Completed</div>
+                    </div>
+                    <div class="bg-white rounded-xl p-6 shadow-sm">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-calendar-check text-blue-600"></i>
+                            </div>
+                            <span class="text-green-600 text-sm font-medium">Streak!</span>
+                        </div>
+                        <div class="text-2xl font-bold text-gray-900">14</div>
+                        <div class="text-sm text-gray-600">Day Streak</div>
+                    </div>
+                    <div class="bg-white rounded-xl p-6 shadow-sm">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-bullseye text-orange-600"></i>
+                            </div>
+                            <span class="text-orange-600 text-sm font-medium">78%</span>
+                        </div>
+                        <div class="text-2xl font-bold text-gray-900">Goal</div>
+                        <div class="text-sm text-gray-600">Progress to Target</div>
+                    </div>
+                </div>
+
+                <div class="grid lg:grid-cols-3 gap-8">
+                    <!-- Today's Workout -->
+                    <div class="lg:col-span-2">
+                        <div class="bg-white rounded-xl shadow-sm p-6">
+                            <h2 class="text-lg font-bold text-gray-900 mb-4">Today's Workout</h2>
+                            <div class="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl p-6 text-white">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <div class="text-sm text-purple-200">Day 14 of Your Plan</div>
+                                        <h3 class="text-xl font-bold mt-1">Upper Body Strength</h3>
+                                        <p class="text-purple-200 mt-2">45 mins • 8 exercises • Intermediate</p>
+                                    </div>
+                                    <button class="bg-white text-purple-600 px-4 py-2 rounded-lg font-medium hover:bg-gray-100 transition">
+                                        Start Workout
+                                    </button>
+                                </div>
+                                <div class="mt-6 grid grid-cols-4 gap-4">
+                                    <div class="text-center">
+                                        <div class="text-2xl font-bold">8</div>
+                                        <div class="text-xs text-purple-200">Exercises</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="text-2xl font-bold">45</div>
+                                        <div class="text-xs text-purple-200">Minutes</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="text-2xl font-bold">320</div>
+                                        <div class="text-xs text-purple-200">Est. Calories</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="text-2xl font-bold">⭐</div>
+                                        <div class="text-xs text-purple-200">Intensity</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Progress Chart Placeholder -->
+                        <div class="bg-white rounded-xl shadow-sm p-6 mt-6">
+                            <h2 class="text-lg font-bold text-gray-900 mb-4">Weekly Progress</h2>
+                            <div class="h-48 flex items-end justify-between gap-2 px-4">
+                                <div class="flex-1 bg-purple-200 rounded-t-lg" style="height: 60%"></div>
+                                <div class="flex-1 bg-purple-300 rounded-t-lg" style="height: 80%"></div>
+                                <div class="flex-1 bg-purple-400 rounded-t-lg" style="height: 45%"></div>
+                                <div class="flex-1 bg-purple-500 rounded-t-lg" style="height: 90%"></div>
+                                <div class="flex-1 bg-purple-600 rounded-t-lg" style="height: 70%"></div>
+                                <div class="flex-1 bg-purple-400 rounded-t-lg" style="height: 55%"></div>
+                                <div class="flex-1 gradient-bg rounded-t-lg" style="height: 100%"></div>
+                            </div>
+                            <div class="flex justify-between text-xs text-gray-500 mt-2 px-4">
+                                <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Sidebar -->
+                    <div>
+                        <!-- AI Motivation -->
+                        <div class="bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl p-6 text-white mb-6">
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-robot"></i>
+                                </div>
+                                <div class="font-medium">AI Weekly Motivation</div>
+                            </div>
+                            <p class="text-green-100">
+                                "You're on a 14-day streak! Your consistency is paying off. Studies show it takes 21 days to form a habit—you're 2/3 of the way there. Keep pushing! 💪"
+                            </p>
+                        </div>
+
+                        <!-- Today's Meals -->
+                        <div class="bg-white rounded-xl shadow-sm p-6">
+                            <h2 class="text-lg font-bold text-gray-900 mb-4">Today's Nutrition</h2>
+                            <div class="space-y-4">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-sun text-orange-600"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="font-medium text-gray-900">Breakfast</div>
+                                        <div class="text-sm text-gray-600">Greek Yogurt Bowl</div>
+                                    </div>
+                                    <div class="text-sm text-gray-500">420 cal</div>
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-cloud-sun text-yellow-600"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="font-medium text-gray-900">Lunch</div>
+                                        <div class="text-sm text-gray-600">Grilled Chicken Salad</div>
+                                    </div>
+                                    <div class="text-sm text-gray-500">580 cal</div>
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-moon text-purple-600"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="font-medium text-gray-900">Dinner</div>
+                                        <div class="text-sm text-gray-600">Salmon with Veggies</div>
+                                    </div>
+                                    <div class="text-sm text-gray-500">650 cal</div>
+                                </div>
+                            </div>
+                            <button onclick="showPage('diet')" class="w-full mt-4 text-purple-600 font-medium text-sm hover:text-purple-700">
+                                View Full Meal Plan →
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==========================================
+         FOOTER
+         ========================================== -->
+    <footer class="bg-gray-900 text-white py-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid md:grid-cols-4 gap-12">
+                <div>
+                    <div class="flex items-center mb-6">
+                        <div class="w-10 h-10 gradient-bg rounded-xl flex items-center justify-center">
+                            <i class="fas fa-brain text-white text-lg"></i>
+                        </div>
+                        <span class="ml-3 text-xl font-bold">FitMind</span>
+                    </div>
+                    <p class="text-gray-400">
+                        Your AI-powered fitness companion. Transform your body and mind with personalized training and nutrition guidance.
+                    </p>
+                    <div class="flex gap-4 mt-6">
+                        <a href="#" class="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-purple-600 transition">
+                            <i class="fab fa-facebook-f"></i>
+                        </a>
+                        <a href="#" class="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-purple-600 transition">
+                            <i class="fab fa-instagram"></i>
+                        </a>
+                        <a href="#" class="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-purple-600 transition">
+                            <i class="fab fa-twitter"></i>
+                        </a>
+                        <a href="#" class="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-purple-600 transition">
+                            <i class="fab fa-youtube"></i>
+                        </a>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-lg mb-4">Product</h3>
+                    <ul class="space-y-3 text-gray-400">
+                        <li><a href="#" onclick="showPage('workouts')" class="hover:text-white transition">Workouts</a></li>
+                        <li><a href="#" onclick="showPage('ai')" class="hover:text-white transition">AI Trainer</a></li>
+                        <li><a href="#" onclick="showPage('diet')" class="hover:text-white transition">Nutrition</a></li>
+                        <li><a href="#" onclick="showPage('pricing')" class="hover:text-white transition">Pricing</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-lg mb-4">Company</h3>
+                    <ul class="space-y-3 text-gray-400">
+                        <li><a href="#" class="hover:text-white transition">About Us</a></li>
+                        <li><a href="#" class="hover:text-white transition">Careers</a></li>
+                        <li><a href="#" class="hover:text-white transition">Blog</a></li>
+                        <li><a href="#" onclick="showPage('contact')" class="hover:text-white transition">Contact</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-lg mb-4">Support</h3>
+                    <ul class="space-y-3 text-gray-400">
+                        <li><a href="#" class="hover:text-white transition">Help Center</a></li>
+                        <li><a href="#" class="hover:text-white transition">Privacy Policy</a></li>
+                        <li><a href="#" class="hover:text-white transition">Terms of Service</a></li>
+                        <li><a href="mailto:muthurajp064@gmail.com" class="hover:text-white transition">muthurajp064@gmail.com</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-gray-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
+                <p class="text-gray-400 text-sm">
+                    © 2024 FitMind. All rights reserved.
+                </p>
+                <div class="flex gap-6 mt-4 md:mt-0 text-sm text-gray-400">
+                    <a href="#" class="hover:text-white transition">Privacy</a>
+                    <a href="#" class="hover:text-white transition">Terms</a>
+                    <a href="#" class="hover:text-white transition">Cookies</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ==========================================
+         JAVASCRIPT
+         ========================================== -->
+    <script>
+        // ==========================================
+        // DEMO DATA - Workouts
+        // ==========================================
+        const demoWorkouts = [
+            {
+                id: 1,
+                title: "Full Body Burn",
+                category: "HIIT",
+                difficulty: "intermediate",
+                duration: 30,
+                calories: 350,
+                image: "https://images.unsplash.com/photo-1549060279-7e168fcee0c2?w=600",
+                description: "A high-intensity interval training session that targets all major muscle groups for maximum calorie burn."
+            },
+            {
+                id: 2,
+                title: "Core Crusher",
+                category: "Strength",
+                difficulty: "advanced",
+                duration: 25,
+                calories: 200,
+                image: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=600",
+                description: "Intense ab workout focusing on all areas of your core for a stronger, more defined midsection."
+            },
+            {
+                id: 3,
+                title: "Beginner Yoga Flow",
+                category: "Yoga",
+                difficulty: "beginner",
+                duration: 45,
+                calories: 150,
+                image: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=600",
+                description: "A gentle introduction to yoga with basic poses to improve flexibility and reduce stress."
+            },
+            {
+                id: 4,
+                title: "Power Legs",
+                category: "Strength",
+                difficulty: "intermediate",
+                duration: 40,
+                calories: 400,
+                image: "https://images.unsplash.com/photo-1434608519344-49d77a699e1d?w=600",
+                description: "Build powerful legs with squats, lunges, and targeted exercises for quads, hamstrings, and glutes."
+            },
+            {
+                id: 5,
+                title: "Cardio Kickboxing",
+                category: "Cardio",
+                difficulty: "intermediate",
+                duration: 35,
+                calories: 450,
+                image: "https://images.unsplash.com/photo-1615117972428-28de67cda58f?w=600",
+                description: "Punch and kick your way to fitness with this heart-pumping cardio workout inspired by martial arts."
+            },
+            {
+                id: 6,
+                title: "Upper Body Sculpt",
+                category: "Strength",
+                difficulty: "beginner",
+                duration: 30,
+                calories: 250,
+                image: "https://images.unsplash.com/photo-1581009146145-b5ef050c149a?w=600",
+                description: "Tone and strengthen your arms, chest, shoulders, and back with this beginner-friendly routine."
+            }
+        ];
+
+        // ==========================================
+        // DEMO DATA - Meals
+        // ==========================================
+        const demoMeals = [
+            {
+                id: 1,
+                title: "Protein Power Bowl",
+                category: "Lunch",
+                calories: 520,
+                protein: 42,
+                image: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600",
+                description: "Grilled chicken, quinoa, roasted vegetables, and tahini dressing."
+            },
+            {
+                id: 2,
+                title: "Greek Yogurt Parfait",
+                category: "Breakfast",
+                calories: 380,
+                protein: 24,
+                image: "https://images.unsplash.com/photo-1488477181946-6428a0291777?w=600",
+                description: "Creamy Greek yogurt layered with berries, granola, and honey."
+            },
+            {
+                id: 3,
+                title: "Salmon & Asparagus",
+                category: "Dinner",
+                calories: 480,
+                protein: 38,
+                image: "https://images.unsplash.com/photo-1467003909585-2f8a72700288?w=600",
+                description: "Oven-baked salmon with lemon herb seasoning and grilled asparagus."
+            },
+            {
+                id: 4,
+                title: "Green Smoothie",
+                category: "Snack",
+                calories: 220,
+                protein: 12,
+                image: "https://images.unsplash.com/photo-1638176066666-ffb2f013c7dd?w=600",
+                description: "Spinach, banana, almond milk, protein powder, and chia seeds."
+            },
+            {
+                id: 5,
+                title: "Turkey Wrap",
+                category: "Lunch",
+                calories: 410,
+                protein: 32,
+                image: "https://images.unsplash.com/photo-1626700051175-6818013e1d4f?w=600",
+                description: "Whole wheat wrap with lean turkey, avocado, and fresh veggies."
+            },
+            {
+                id: 6,
+                title: "Overnight Oats",
+                category: "Breakfast",
+                calories: 350,
+                protein: 18,
+                image: "https://images.unsplash.com/photo-1517673400267-0251440c45dc?w=600",
+                description: "Oats soaked in almond milk with nut butter and fresh berries."
+            },
+            {
+                id: 7,
+                title: "Lean Beef Stir-Fry",
+                category: "Dinner",
+                calories: 520,
+                protein: 40,
+                image: "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=600",
+                description: "Tender beef strips with colorful vegetables in a light soy glaze."
+            },
+            {
+                id: 8,
+                title: "Protein Energy Balls",
+                category: "Snack",
+                calories: 180,
+                protein: 10,
+                image: "https://images.unsplash.com/photo-1604329760661-e71dc83f8f26?w=600",
+                description: "No-bake balls with oats, peanut butter, honey, and dark chocolate chips."
+            }
+        ];
+
+        // ==========================================
+        // DEMO DATA - AI Responses
+        // ==========================================
+        const demoResponses = {
+            workout_fatLoss: `Great choice! Here's a 4-week fat loss workout plan designed specifically for you:
+
+**Week 1-2: Foundation Phase**
+• Monday: Full Body HIIT (30 min)
+• Tuesday: Upper Body Strength (40 min)
+• Wednesday: Active Recovery - Walking/Yoga
+• Thursday: Lower Body Strength (40 min)
+• Friday: Cardio Intervals (25 min)
+• Saturday: Full Body Circuit (35 min)
+• Sunday: Rest Day
+
+**Week 3-4: Intensification Phase**
+• Increase weights by 10-15%
+• Add 5 minutes to cardio sessions
+• Include supersets in strength workouts
+
+**Key Tips:**
+✓ Aim for 10,000 steps daily
+✓ Keep rest periods to 30-45 seconds
+✓ Track your calories - aim for a 300-500 calorie deficit
+✓ Stay hydrated with 8+ glasses of water
+
+*In the live version, this would be fully customized based on your fitness level, available equipment, and schedule preferences.*`,
+
+            workout_muscleGain: `Perfect goal! Here's your muscle-building routine for beginners:
+
+**Weekly Split:**
+• Monday: Chest & Triceps
+• Tuesday: Back & Biceps
+• Wednesday: Rest + Cardio (optional)
+• Thursday: Shoulders & Core
+• Friday: Legs & Glutes
+• Saturday: Full Body Compound Movements
+• Sunday: Rest Day
+
+**Sample Chest & Triceps Day:**
+1. Bench Press: 4 sets x 8-10 reps
+2. Incline Dumbbell Press: 3 sets x 10-12 reps
+3. Cable Flyes: 3 sets x 12-15 reps
+4. Tricep Dips: 3 sets x 10-12 reps
+5. Tricep Pushdowns: 3 sets x 12-15 reps
+
+**Nutrition Focus:**
+✓ Protein: 1g per pound of bodyweight
+✓ Eat in a slight caloric surplus (200-300 cal)
+✓ Prioritize post-workout nutrition
+
+*In the live version, this would include video demonstrations and progressive overload tracking.*`,
+
+            mealPlan: `Here's your personalized weekly meal plan:
+
+**Breakfast Options:**
+• Protein Oatmeal with berries (420 cal, 28g protein)
+• Egg White Veggie Scramble (350 cal, 32g protein)
+• Greek Yogurt Parfait (380 cal, 24g protein)
+
+**Lunch Ideas:**
+• Grilled Chicken Salad (480 cal, 42g protein)
+• Turkey & Avocado Wrap (450 cal, 35g protein)
+• Quinoa Power Bowl (520 cal, 28g protein)
+
+**Dinner Recipes:**
+• Baked Salmon with Vegetables (520 cal, 40g protein)
+• Lean Beef Stir-Fry (480 cal, 38g protein)
+• Grilled Chicken with Sweet Potato (550 cal, 45g protein)
+
+**Snacks:**
+• Protein smoothie (200 cal)
+• Almonds & apple (180 cal)
+• Cottage cheese with fruit (150 cal)
+
+*In the live version, this would be dynamically adjusted based on your specific dietary restrictions and macro targets.*`,
+
+            motivation: `I love your commitment to staying consistent! Here's what I want you to remember:
+
+**The Truth About Consistency:**
+Every single workout counts. Even on days when you don't feel 100%, showing up is what separates those who achieve their goals from those who don't.
+
+**Your Weekly Affirmations:**
+💪 "I am stronger than my excuses."
+💪 "Progress, not perfection."
+💪 "I didn't come this far to only come this far."
+
+**Practical Tips for Staying Motivated:**
+1. **Set micro-goals**: Focus on just today's workout, not the whole month
+2. **Track your wins**: Write down one thing you're proud of each day
+3. **Find your why**: When motivation fades, remember why you started
+4. **Build a routine**: Same time, same place = automatic habit
+5. **Celebrate progress**: Take progress photos every 2 weeks
+
+**Remember:** You're not just building a body—you're building discipline, confidence, and mental strength. Those benefits last a lifetime.
+
+*Keep pushing! I believe in you.* 🌟`
+        };
+
+        // ==========================================
+        // PAGE NAVIGATION
+        // ==========================================
+        function showPage(pageName) {
+            // Hide all pages
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.add('hidden');
+            });
+            
+            // Show requested page
+            const page = document.getElementById(`page-${pageName}`);
+            if (page) {
+                page.classList.remove('hidden');
+            }
+            
+            // Update nav active state
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('nav-active');
+            });
+            
+            // Scroll to top
+            window.scrollTo(0, 0);
+            
+            // Load page-specific content
+            if (pageName === 'workouts') loadWorkouts();
+            if (pageName === 'diet') loadMeals();
+        }
+
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobileMenu');
+            menu.classList.toggle('hidden');
+        }
+
+        // ==========================================
+        // WORKOUT FUNCTIONS
+        // ==========================================
+        function loadWorkouts(filter = 'all') {
+            const grid = document.getElementById('workoutGrid');
+            const filtered = filter === 'all' 
+                ? demoWorkouts 
+                : demoWorkouts.filter(w => w.difficulty === filter);
+            
+            grid.innerHTML = filtered.map(workout => `
+                <div class="card-hover bg-white rounded-2xl shadow-sm overflow-hidden" data-difficulty="${workout.difficulty}">
+                    <div class="relative">
+                        <img src="${workout.image}" alt="${workout.title}" class="w-full h-48 object-cover">
+                        <div class="absolute top-4 left-4">
+                            <span class="px-3 py-1 rounded-full text-xs font-medium ${
+                                workout.difficulty === 'beginner' ? 'bg-green-100 text-green-700' :
+                                workout.difficulty === 'intermediate' ? 'bg-yellow-100 text-yellow-700' :
+                                'bg-red-100 text-red-700'
+                            }">${workout.difficulty.charAt(0).toUpperCase() + workout.difficulty.slice(1)}</span>
+                        </div>
+                        <div class="absolute top-4 right-4">
+                            <span class="px-3 py-1 bg-white/90 rounded-full text-xs font-medium text-gray-700">${workout.category}</span>
+                        </div>
+                    </div>
+                    <div class="p-5">
+                        <h3 class="font-bold text-gray-900 text-lg">${workout.title}</h3>
+                        <p class="text-gray-600 text-sm mt-2">${workout.description}</p>
+                        <div class="flex items-center justify-between mt-4 pt-4 border-t">
+                            <div class="flex items-center gap-4 text-sm text-gray-500">
+                                <span><i class="far fa-clock mr-1"></i>${workout.duration} min</span>
+                                <span><i class="fas fa-fire mr-1"></i>${workout.calories} cal</span>
+                            </div>
+                            <button class="text-purple-600 font-medium text-sm hover:text-purple-700">
+                                Start →
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterWorkouts(difficulty) {
+            // Update button states
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active', 'bg-purple-100', 'text-purple-700');
+                btn.classList.add('bg-gray-100', 'text-gray-600');
+            });
+            event.target.classList.add('active', 'bg-purple-100', 'text-purple-700');
+            event.target.classList.remove('bg-gray-100', 'text-gray-600');
+            
+            loadWorkouts(difficulty);
+        }
+
+        // ==========================================
+        // MEAL FUNCTIONS
+        // ==========================================
+        function loadMeals() {
+            const grid = document.getElementById('mealGrid');
+            grid.innerHTML = demoMeals.map(meal => `
+                <div class="card-hover bg-white rounded-xl shadow-sm overflow-hidden">
+                    <img src="${meal.image}" alt="${meal.title}" class="w-full h-40 object-cover">
+                    <div class="p-4">
+                        <span class="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded">${meal.category}</span>
+                        <h3 class="font-semibold text-gray-900 mt-2">${meal.title}</h3>
+                        <p class="text-gray-600 text-sm mt-1">${meal.description}</p>
+                        <div class="flex items-center justify-between mt-3 text-sm text-gray-500">
+                            <span>${meal.calories} cal</span>
+                            <span>${meal.protein}g protein</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function generateMealPlan() {
+            const goal = document.getElementById('mealGoal').value;
+            const pref = document.getElementById('dietPref').value;
+            const calories = document.getElementById('calories').value;
+            
+            const resultDiv = document.getElementById('mealPlanResult');
+            const contentDiv = document.getElementById('mealPlanContent');
+            
+            // Show loading state
+            resultDiv.classList.remove('hidden');
+            contentDiv.innerHTML = `
+                <div class="col-span-3 text-center py-8">
+                    <div class="typing-indicator inline-flex gap-1">
+                        <span class="w-2 h-2 bg-green-600 rounded-full"></span>
+                        <span class="w-2 h-2 bg-green-600 rounded-full"></span>
+                        <span class="w-2 h-2 bg-green-600 rounded-full"></span>
+                    </div>
+                    <p class="text-gray-600 mt-2">Generating your personalized meal plan...</p>
+                </div>
+            `;
+            
+            // Simulate AI response
+            setTimeout(() => {
+                const dailyCal = parseInt(calories);
+                const mealCalories = {
+                    breakfast: Math.round(dailyCal * 0.25),
+                    lunch: Math.round(dailyCal * 0.35),
+                    dinner: Math.round(dailyCal * 0.30),
+                    snacks: Math.round(dailyCal * 0.10)
+                };
+                
+                contentDiv.innerHTML = `
+                    <div class="bg-orange-50 rounded-xl p-4">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-8 h-8 bg-orange-200 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-sun text-orange-600 text-sm"></i>
+                            </div>
+                            <h4 class="font-semibold text-gray-900">Breakfast</h4>
+                        </div>
+                        <p class="text-sm text-gray-700 font-medium">Greek Yogurt Power Bowl</p>
+                        <p class="text-xs text-gray-600 mt-1">Greek yogurt, mixed berries, granola, honey, chia seeds</p>
+                        <p class="text-xs text-green-600 font-medium mt-2">${mealCalories.breakfast} calories • 28g protein</p>
+                    </div>
+                    <div class="bg-yellow-50 rounded-xl p-4">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-8 h-8 bg-yellow-200 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-cloud-sun text-yellow-600 text-sm"></i>
+                            </div>
+                            <h4 class="font-semibold text-gray-900">Lunch</h4>
+                        </div>
+                        <p class="text-sm text-gray-700 font-medium">Grilled Chicken Quinoa Bowl</p>
+                        <p class="text-xs text-gray-600 mt-1">Grilled chicken breast, quinoa, roasted vegetables, tahini</p>
+                        <p class="text-xs text-green-600 font-medium mt-2">${mealCalories.lunch} calories • 42g protein</p>
+                    </div>
+                    <div class="bg-purple-50 rounded-xl p-4">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-8 h-8 bg-purple-200 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-moon text-purple-600 text-sm"></i>
+                            </div>
+                            <h4 class="font-semibold text-gray-900">Dinner</h4>
+                        </div>
+                        <p class="text-sm text-gray-700 font-medium">Baked Salmon with Asparagus</p>
+                        <p class="text-xs text-gray-600 mt-1">Wild salmon, asparagus, sweet potato, olive oil, lemon</p>
+                        <p class="text-xs text-green-600 font-medium mt-2">${mealCalories.dinner} calories • 38g protein</p>
+                    </div>
+                `;
+            }, 1500);
+        }
+
+        // ==========================================
+        // AI CHAT FUNCTIONS
+        // ==========================================
+        function sendMessage(event) {
+            event.preventDefault();
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            if (!message) return;
+            
+            addChatMessage(message, 'user');
+            input.value = '';
+            
+            // Show typing indicator
+            showTypingIndicator();
+            
+            // Simulate AI response
+            setTimeout(() => {
+                removeTypingIndicator();
+                const response = getAIResponse(message);
+                addChatMessage(response, 'assistant');
+            }, 1500);
+        }
+
+        function sendQuickPrompt(prompt) {
+            document.getElementById('chatInput').value = prompt;
+            sendMessage(new Event('submit'));
+        }
+
+        function addChatMessage(content, type) {
+            const container = document.getElementById('chatMessages');
+            const isUser = type === 'user';
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `chat-bubble flex ${isUser ? 'justify-end' : 'justify-start'}`;
+            messageDiv.innerHTML = `
+                <div class="${isUser ? 'bg-purple-600 text-white rounded-2xl rounded-tr-sm' : 'bg-gray-100 text-gray-800 rounded-2xl rounded-tl-sm'} px-4 py-3 max-w-md whitespace-pre-line">
+                    ${content}
+                </div>
+            `;
+            
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function showTypingIndicator() {
+            const container = document.getElementById('chatMessages');
+            const indicator = document.createElement('div');
+            indicator.id = 'typingIndicator';
+            indicator.className = 'chat-bubble flex justify-start';
+            indicator.innerHTML = `
+                <div class="bg-gray-100 text-gray-800 rounded-2xl rounded-tl-sm px-4 py-3">
+                    <div class="typing-indicator flex gap-1">
+                        <span class="w-2 h-2 bg-gray-400 rounded-full"></span>
+                        <span class="w-2 h-2 bg-gray-400 rounded-full"></span>
+                        <span class="w-2 h-2 bg-gray-400 rounded-full"></span>
+                    </div>
+                </div>
+            `;
+            container.appendChild(indicator);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function removeTypingIndicator() {
+            const indicator = document.getElementById('typingIndicator');
+            if (indicator) indicator.remove();
+        }
+
+        function getAIResponse(message) {
+            const lowerMessage = message.toLowerCase();
+            
+            if (CONFIG.MODE === 'demo') {
+                if (lowerMessage.includes('fat loss') || lowerMessage.includes('lose weight') || lowerMessage.includes('burn fat')) {
+                    return demoResponses.workout_fatLoss;
+                } else if (lowerMessage.includes('muscle') || lowerMessage.includes('strength') || lowerMessage.includes('build')) {
+                    return demoResponses.workout_muscleGain;
+                } else if (lowerMessage.includes('meal') || lowerMessage.includes('diet') || lowerMessage.includes('nutrition') || lowerMessage.includes('eat')) {
+                    return demoResponses.mealPlan;
+                } else if (lowerMessage.includes('motivation') || lowerMessage.includes('consistent') || lowerMessage.includes('motivated')) {
+                    return demoResponses.motivation;
+                } else {
+                    return `Thanks for your message! I understand you're asking about "${message}".\n\nIn the full version, I would provide detailed, personalized advice based on your fitness profile, goals, and history.\n\nFor this demo, try asking me about:\n• Fat loss workout plans\n• Muscle building routines\n• Meal planning advice\n• Staying motivated`;
+                }
+            } else {
+                // LIVE MODE - Would connect to actual AI API
+                return callAIModel(message);
+            }
+        }
+
+        function callAIModel(userInput) {
+            // This would be the live API call in production
+            /*
+            const response = await fetch(CONFIG.API_ENDPOINT + '/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${API_KEY}`
+                },
+                body: JSON.stringify({
+                    message: userInput,
+                    context: userProfile,
+                    history: conversationHistory
+                })
+            });
+            return await response.json();
+            */
+            return "Live mode response would appear here with full AI capabilities.";
+        }
+
+        function clearChat() {
+            const container = document.getElementById('chatMessages');
+            container.innerHTML = `
+                <div class="chat-bubble flex justify-start">
+                    <div class="bg-gray-100 text-gray-800 rounded-2xl rounded-tl-sm px-4 py-3 max-w-md">
+                        <p>Hey there! 👋 I'm your FitMind AI trainer. I'm here to help you achieve your fitness goals.</p>
+                        <p class="mt-2">What would you like to work on today?</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ==========================================
+        // PRICING FUNCTIONS
+        // ==========================================
+        let isYearly = true;
+
+        function toggleBilling() {
+            isYearly = !isYearly;
+            const dot = document.getElementById('billingDot');
+            
+            if (isYearly) {
+                dot.style.right = '4px';
+                dot.style.left = 'auto';
+                document.getElementById('basicPrice').textContent = '$15';
+                document.getElementById('basicPeriod').textContent = '/month';
+                document.getElementById('proPrice').textContent = '$31';
+                document.getElementById('proPeriod').textContent = '/month';
+                document.getElementById('elitePrice').textContent = '$63';
+                document.getElementById('elitePeriod').textContent = '/month';
+            } else {
+                dot.style.left = '4px';
+                dot.style.right = 'auto';
+                document.getElementById('basicPrice').textContent = '$19';
+                document.getElementById('basicPeriod').textContent = '/month';
+                document.getElementById('proPrice').textContent = '$39';
+                document.getElementById('proPeriod').textContent = '/month';
+                document.getElementById('elitePrice').textContent = '$79';
+                document.getElementById('elitePeriod').textContent = '/month';
+            }
+        }
+
+        // ==========================================
+        // AUTH FUNCTIONS
+        // ==========================================
+        function handleLogin(event) {
+            event.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            // Demo login check
+            if (email === 'demo@fitmind.com' && password === 'demo123') {
+                localStorage.setItem('fitmind_user', JSON.stringify({
+                    name: 'Demo User',
+                    email: email,
+                    membership: 'pro'
+                }));
+                document.getElementById('userName').textContent = 'Demo User';
+                showPage('dashboard');
+                showNotification('Welcome back! Login successful.', 'success');
+            } else {
+                showNotification('Invalid credentials. Try demo@fitmind.com / demo123', 'error');
+            }
+        }
+
+        function handleSignup(event) {
+            event.preventDefault();
+            const name = document.getElementById('signupName').value;
+            const email = document.getElementById('signupEmail').value;
+            
+            localStorage.setItem('fitmind_user', JSON.stringify({
+                name: name,
+                email: email,
+                membership: 'basic'
+            }));
+            
+            document.getElementById('userName').textContent = name;
+            showPage('dashboard');
+            showNotification('Account created! Welcome to FitMind.', 'success');
+        }
+
+        function handleContact(event) {
+            event.preventDefault();
+            showNotification('Message sent! We\'ll get back to you within 24 hours.', 'success');
+            event.target.reset();
+        }
+
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-20 right-4 z-50 px-6 py-3 rounded-xl shadow-lg ${
+                type === 'success' ? 'bg-green-500' : 'bg-red-500'
+            } text-white font-medium`;
+            notification.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} mr-2"></i>${message}`;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // ==========================================
+        // INITIALIZATION
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', () => {
+            // Update mode indicator
+            const modeLabel = document.getElementById('aiModeLabel');
+            if (CONFIG.MODE === 'demo') {
+                modeLabel.textContent = 'Demo Mode Active';
+            } else {
+                modeLabel.textContent = 'AI Live Mode';
+                document.getElementById('modeIndicator').classList.remove('bg-amber-100', 'text-amber-800');
+                document.getElementById('modeIndicator').classList.add('bg-green-100', 'text-green-800');
+            }
+            
+            // Check for existing user session
+            const user = localStorage.getItem('fitmind_user');
+            if (user) {
+                const userData = JSON.parse(user);
+                document.getElementById('userName').textContent = userData.name;
+            }
+        });
+
+        // ==========================================
+        // PORTFOLIO SUMMARY
+        // ==========================================
+        /*
+        PROJECT: FitMind - AI-Powered Fitness & Wellness Platform
+        
+        DESCRIPTION:
+        FitMind is a comprehensive SaaS demo showcasing a modern fitness
+        membership platform with integrated AI capabilities. The project
+        demonstrates full-stack development skills including responsive UI/UX
+        design, AI chat integration, subscription management, and user
+        authentication patterns.
+        
+        KEY FEATURES:
+        • AI Personal Trainer with natural language processing
+        • Workout library with filtering and categorization
+        • Personalized meal plan generation
+        • Progress tracking dashboard
+        • Tiered subscription pricing model
+        • Demo/Live mode switching for presentations
+        
+        TECHNOLOGIES:
+        • Frontend: HTML5, Tailwind CSS, Vanilla JavaScript
+        • Design: Responsive, Mobile-first, Modern UI patterns
+        • AI Integration: Chat interface with demo/live mode logic
+        • Data: Structured demo data simulating real database
+        
+        TARGET AUDIENCE:
+        • Personal trainers seeking online platform
+        • Gym owners wanting member engagement tools
+        • Online coaching businesses
+        • Fitness enthusiasts seeking personalized guidance
+        
+        FUTURE IMPROVEMENTS:
+        1. Real AI API integration (OpenAI, Claude, etc.)
+        2. Video workout player with exercise tracking
+        3. Social features and community forums
+        4. Wearable device integration
+        5. Advanced analytics dashboard
+        6. Mobile app companion
+        7. Live coaching video sessions
+        8. Gamification and achievements system
+        */
+    </script>
+</body>
+</html>
